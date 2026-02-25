@@ -62,7 +62,8 @@ scrollback-limit = 100000000
 
 # --- Nice-to-haves ---
 copy-on-select = true
-macos-option-as-alt = true
+macos-option-as-alt = left
+window-save-state = always
 window-padding-x = 10
 window-padding-y = 10
 
@@ -86,8 +87,18 @@ keybind = cmd+shift+k=new_split:up
 keybind = cmd+shift+l=new_split:right
 
 ############################
+# Split resize
+############################
+keybind = cmd+option+h=resize_split:left,10
+keybind = cmd+option+j=resize_split:down,10
+keybind = cmd+option+k=resize_split:up,10
+keybind = cmd+option+l=resize_split:right,10
+
+############################
 # Split management
 ############################
+keybind = cmd+option+equal=equalize_splits
+keybind = cmd+option+enter=toggle_split_zoom
 keybind = option+w=close_surface
 
 
