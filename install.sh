@@ -39,4 +39,7 @@ link_file() {
 # Ghostty
 link_file "$REPO_ROOT/ghostty/config" "$HOME/.config/ghostty/config"
 
+# SSH
+link_file "$REPO_ROOT/ssh/config" "$HOME/.ssh/config"
+
 echo "Done."

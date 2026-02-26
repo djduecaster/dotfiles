@@ -1,0 +1,23 @@
+# Shared SSH config (tracked in dotfiles).
+# Put machine-specific/private entries in ~/.ssh/config.local.
+Include ~/.ssh/config.local
+
+Host *
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentitiesOnly yes
+
+# Example Tailscale hosts (placeholders).
+# Replace HostName/User/IdentityFile values per device.
+Host macbook-ts
+  HostName 100.64.0.10
+  User djduecaster
+  IdentityFile ~/.ssh/id_ed25519
+
+Host jetson-ts
+  HostName jetson.tailnet-name.ts.net
+  User djduecaster
+  Port 22
+  IdentityFile ~/.ssh/id_ed25519
