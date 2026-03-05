@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+check_only=0
+run_install=1
+generate_tailscale=1
+
+usage() {
+  cat <<'EOF'
+Usage:
+  scripts/bootstrap [options]
+
+Options:
+  --check           Only check prerequisites (no package installs)
+  --skip-install    Skip running ./install.sh
+  --skip-tailscale  Skip generating ~/.ssh/config.tailscale
+  -h, --help        Show this help
+EOF
+}
+
+log() {
+  echo "BOOTSTRAP: $*"
+}
+
+warn() {
+  echo "WARN: $*" >&2
+}
+
+while (($# > 0)); do
+  case "$1" in
+    --check)
+      check_only=1
+      shift
+      ;;
+    --skip-install)
+      run_install=0
+      shift
+      ;;
+    --skip-tailscale)
+      generate_tailscale=0
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+missing=()
+for cmd in jq tailscale ssh; do
+  if ! command -v "$cmd" >/dev/null 2>&1; then
+    missing+=("$cmd")
+  fi
+done
+
+if ((${#missing[@]} > 0)); then
+  if ((check_only == 1)); then
+    echo "Missing required commands: ${missing[*]}" >&2
+    exit 1
+  fi
+
+  if command -v brew >/dev/null 2>&1; then
+    for pkg in "${missing[@]}"; do
+      log "Installing missing package with Homebrew: $pkg"
+      brew install "$pkg"
+    done
+  else
+    echo "Missing required commands: ${missing[*]}" >&2
+    echo "Install Homebrew or install these packages manually." >&2
+    exit 1
+  fi
+fi
+
+if ((run_install == 1)); then
+  log "Running install.sh to link dotfiles"
+  "$REPO_ROOT/install.sh"
+fi
+
+if ((generate_tailscale == 1)); then
+  if "$REPO_ROOT/scripts/generate-tailscale-ssh-config.sh"; then
+    log "Generated ~/.ssh/config.tailscale"
+  else
+    warn "Could not generate ~/.ssh/config.tailscale. Tailscale may not be running yet."
+  fi
+fi
+
+log "Done."

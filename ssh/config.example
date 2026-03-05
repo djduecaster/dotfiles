@@ -1,0 +1,12 @@
+# Local SSH config (copied to ssh/config on install if missing).
+# Keep machine-specific/private entries in ~/.ssh/config.local.
+# Tailscale entries are generated into ~/.ssh/config.tailscale.
+Include ~/.ssh/config.local
+Include ~/.ssh/config.tailscale
+
+Host *
+  ServerAliveInterval 30
+  ServerAliveCountMax 3
+  AddKeysToAgent yes
+  UseKeychain yes
+  IdentitiesOnly yes

@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+failures=0
+warnings=0
+
+pass() {
+  echo "PASS: $*"
+}
+
+warn() {
+  warnings=$((warnings + 1))
+  echo "WARN: $*"
+}
+
+fail() {
+  failures=$((failures + 1))
+  echo "FAIL: $*"
+}
+
+check_cmd() {
+  local cmd="$1"
+  if command -v "$cmd" >/dev/null 2>&1; then
+    pass "Command available: $cmd"
+  else
+    fail "Missing command: $cmd"
+  fi
+}
+
+check_link() {
+  local dst="$1"
+  local expected_src="$2"
+
+  if [ -L "$dst" ]; then
+    local current_src
+    current_src="$(readlink "$dst")"
+    if [ "$current_src" = "$expected_src" ]; then
+      pass "Symlink OK: $dst -> $expected_src"
+    else
+      fail "Symlink mismatch: $dst -> $current_src (expected $expected_src)"
+    fi
+    return
+  fi
+
+  if [ -e "$dst" ]; then
+    fail "Expected symlink but found regular file/dir: $dst"
+  else
+    fail "Missing symlink: $dst"
+  fi
+}
+
+check_include_line() {
+  local file="$1"
+  local include="$2"
+  if grep -Fqx "$include" "$file"; then
+    pass "Include present in $file: $include"
+  else
+    fail "Missing include in $file: $include"
+  fi
+}
+
+echo "Running dotfiles doctor..."
+
+check_cmd jq
+check_cmd ssh
+check_cmd tailscale
+
+check_link "$HOME/.config/ghostty/config" "$REPO_ROOT/ghostty/config"
+check_link "$HOME/.ssh/config" "$REPO_ROOT/ssh/config"
+
+if [ -f "$REPO_ROOT/ssh/config" ]; then
+  pass "Local SSH config present: $REPO_ROOT/ssh/config"
+  check_include_line "$REPO_ROOT/ssh/config" "Include ~/.ssh/config.local"
+  check_include_line "$REPO_ROOT/ssh/config" "Include ~/.ssh/config.tailscale"
+else
+  fail "Missing local SSH config: $REPO_ROOT/ssh/config (run ./install.sh)"
+fi
+
+if [ -f "$HOME/.ssh/config.tailscale" ]; then
+  pass "Generated Tailscale include exists: $HOME/.ssh/config.tailscale"
+else
+  warn "Missing generated include: $HOME/.ssh/config.tailscale (run make tailscale-ssh)"
+fi
+
+if tailscale status --json 2>/dev/null | jq -e . >/dev/null 2>&1; then
+  pass "tailscale status --json is healthy"
+else
+  warn "tailscale status --json failed (is Tailscale running and authenticated?)"
+fi
+
+echo
+echo "Doctor summary: ${failures} failures, ${warnings} warnings."
+
+if ((failures > 0)); then
+  exit 1
+fi
